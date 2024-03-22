@@ -1,18 +1,14 @@
 from pprint import pprint
-from dataclasses import dataclass
-from typing import List
+from dataclasses import dataclass, asdict
 
 # Difference between dict??
 @dataclass
 class Query:
-    args: List[str]
+    args: list[str]
     operator: str | None = ""
     
     def __str__(self) -> str:
-        return str({
-            'args': self.args,
-            'operator': self.operator
-        })
+        return str(asdict(self))
 
 
 class Parser:
@@ -56,7 +52,8 @@ class Parser:
         negation_idx = [i for i, x in enumerate(parts) if x == self.negation]
         offset = 0
         for i in negation_idx:
-            parts[i-offset : i-offset+2] = [
+            idx = i-offset
+            parts[idx : idx+2] = [
                 Query(args=[parts[i+1]], operator=self.negation)
             ]
             offset += 1
@@ -70,6 +67,9 @@ class Parser:
                 Query(args=[parts[idx-1], parts[idx+1]], operator=parts[idx])
             ]
             offset += 2
+            
+        if len(parts != 1):
+            raise SyntaxError('Incorrect boolean structure [unhandled pair]')
 
         return parts.pop()
 
