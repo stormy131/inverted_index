@@ -63,12 +63,15 @@ class Parser:
         offset = 0
         for i in opeartion_idx:
             idx = i - offset
+            arguments = [p if isinstance(p, Query) else Query(args=[p], operator=None)
+                         for p in [parts[idx-1], parts[idx+1]]]
+            
             parts[idx-1 : idx+2] = [
-                Query(args=[parts[idx-1], parts[idx+1]], operator=parts[idx])
+                Query(arguments, operator=parts[idx])
             ]
             offset += 2
             
-        if len(parts != 1):
+        if len(parts) != 1:
             raise SyntaxError('Incorrect boolean structure [unhandled pair]')
 
         return parts.pop()

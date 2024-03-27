@@ -1,7 +1,7 @@
 import os
 import re
 from collections import defaultdict
-from query_parser import Parser, Query
+from query_parser import Query
 import lxml.etree as etree
 
 class InvertedIndex:
@@ -9,7 +9,7 @@ class InvertedIndex:
         self.data_dir = doc_dir
         self._data_files = os.listdir(doc_dir)
         self._index = defaultdict(list)
-        self._doc_id_hash = {}
+        self._doc_id_hash = dict()
         self._max_id = 0
         
         if language == 'cs':
@@ -24,7 +24,7 @@ class InvertedIndex:
         doc_id = 0
         parser = etree.XMLParser(recover=True)
         
-        print('Constructing inverted index...', end='  ')
+        print(f'Constructing inverted index for \'{self.data_dir}\' ...', end='  ')
         
         for file in self._data_files:
             file_tree: etree._ElementTree = etree.parse(f'{self.data_dir}/{file}', parser=parser)
@@ -37,7 +37,8 @@ class InvertedIndex:
                     if doc_text is None: continue
                     
                     # TODO: Redundant normalization
-                    for token in set(map(str.lower, re.split(r"\W+", doc_text))):
+                    # for token in set(map(str.lower, re.split(r"\W+", doc_text))):
+                    for token in set(re.split(r"\W+", doc_text)):
                         if token in self._index and self._index[token][-1] == doc_id:
                             continue
                         
@@ -45,14 +46,13 @@ class InvertedIndex:
                         processed_doc = True
 
                 if processed_doc:
-                    self._doc_id_hash[doc.find('DOCID').text] = doc_id
+                    self._doc_id_hash[doc_id] = doc.find('DOCID').text
                     doc_id += 1
         
         self._max_id = doc_id - 1
         print('done')
         
 
-    # TODO: find suitable complement of postings for specific term
     def _negate(self, term_postings: list[int]) -> list[int]:
         return [i for i in range(self._max_id) if i not in term_postings]
         
@@ -66,9 +66,10 @@ class InvertedIndex:
             if postings_a[idx_a] == postings_b[idx_b]:
                 intersection.append(postings_a[idx_a])
                 idx_a, idx_b = idx_a + 1, idx_b + 1
+            elif postings_a[idx_a] < postings_b[idx_b]:
+                idx_a, idx_b = idx_a + 1, idx_b
             else:
-                idx_a = idx_a + 1 if postings_a[idx_a] < postings_b[idx_b] else idx_a
-                idx_b = idx_b if postings_a[idx_a] < postings_b[idx_b] else idx_b + 1
+                idx_a, idx_b = idx_a, idx_b + 1
             
             if idx_a >= len(postings_a) or idx_b >= len(postings_b):
                 break
@@ -95,4 +96,4 @@ class InvertedIndex:
             case 'OR':
                 return self._union(*[self.process_query(q) for q in query.args])
             case _:
-                return self._index[query.args.pop()]
+                return self._index[query.args[0]]
