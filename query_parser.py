@@ -54,7 +54,10 @@ class Parser:
         for i in negation_idx:
             idx = i-offset
             parts[idx : idx+2] = [
-                Query(args=[parts[i+1]], operator=self.negation)
+                Query(
+                    args=[Query(args=[parts[i+1]], operator=None)], 
+                    operator=self.negation
+                )
             ]
             offset += 1
         

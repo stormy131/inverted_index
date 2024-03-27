@@ -36,8 +36,6 @@ class InvertedIndex:
                 for doc_text in doc.itertext(tag=self.target_tags):
                     if doc_text is None: continue
                     
-                    # TODO: Redundant normalization
-                    # for token in set(map(str.lower, re.split(r"\W+", doc_text))):
                     for token in set(re.split(r"\W+", doc_text)):
                         if token in self._index and self._index[token][-1] == doc_id:
                             continue
@@ -63,6 +61,9 @@ class InvertedIndex:
         intersection = []
         
         while True:
+            if idx_a >= len(postings_a) or idx_b >= len(postings_b):
+                break
+            
             if postings_a[idx_a] == postings_b[idx_b]:
                 intersection.append(postings_a[idx_a])
                 idx_a, idx_b = idx_a + 1, idx_b + 1
@@ -71,14 +72,11 @@ class InvertedIndex:
             else:
                 idx_a, idx_b = idx_a, idx_b + 1
             
-            if idx_a >= len(postings_a) or idx_b >= len(postings_b):
-                break
-            
         return intersection
     
     
     def _union(self, postings_a: list[int], postings_b: list[int]) -> list[int]:
-        return set([*postings_a, *postings_b])
+        return list(set([*postings_a, *postings_b]))
 
 
     def process_query(self, query: Query) -> list[int]:
@@ -90,7 +88,7 @@ class InvertedIndex:
         
         match query.operator:
             case 'NOT':
-                return self._negate(self.process_query(query.args.pop()))
+                return self._negate(self.process_query(query.args[0]))
             case 'AND':
                 return self._intersect(*[self.process_query(q) for q in query.args])
             case 'OR':
