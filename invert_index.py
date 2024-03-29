@@ -7,7 +7,6 @@ import lxml.etree as etree
 class InvertedIndex:
     def __init__(self, doc_dir: str, language: str):
         self.data_dir = doc_dir
-        self._data_files = os.listdir(doc_dir)
         self._index = defaultdict(list)
         self._doc_id_hash = dict()
         self._max_id = 0
@@ -26,7 +25,7 @@ class InvertedIndex:
         
         print(f'Constructing inverted index for \'{self.data_dir}\' ...', end='  ')
         
-        for file in self._data_files:
+        for file in os.listdir(self.data_dir):
             file_tree: etree._ElementTree = etree.parse(f'{self.data_dir}/{file}', parser=parser)
             
             for doc in file_tree.iter('DOC'):
@@ -36,6 +35,8 @@ class InvertedIndex:
                 for doc_text in doc.itertext(tag=self.target_tags):
                     if doc_text is None: continue
                     
+                    # Normalization (lowering) case
+                    # for token in map(str.lower, set(re.split(r"\W+", doc_text))):
                     for token in set(re.split(r"\W+", doc_text)):
                         if token in self._index and self._index[token][-1] == doc_id:
                             continue
@@ -55,7 +56,6 @@ class InvertedIndex:
         return [i for i in range(self._max_id) if i not in term_postings]
         
     
-    # TODO: compare to built-in set intersection
     def _intersect(self, postings_a: list[int], postings_b: list[int]) -> list[int]:
         idx_a, idx_b = 0, 0
         intersection = []
@@ -68,12 +68,14 @@ class InvertedIndex:
                 intersection.append(postings_a[idx_a])
                 idx_a, idx_b = idx_a + 1, idx_b + 1
             elif postings_a[idx_a] < postings_b[idx_b]:
-                idx_a, idx_b = idx_a + 1, idx_b
+                idx_a = idx_a + 1
             else:
-                idx_a, idx_b = idx_a, idx_b + 1
+                idx_b = idx_b + 1
             
         return intersection
     
+    # def _intersect(self, postings_a: list[int], postings_b: list[int]) -> list[int]:
+    #     return list(set.intersection(set(postings_a), set(postings_b)))
     
     def _union(self, postings_a: list[int], postings_b: list[int]) -> list[int]:
         return list(set([*postings_a, *postings_b]))

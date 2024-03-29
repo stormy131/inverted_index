@@ -1,7 +1,6 @@
 from pprint import pprint
 from dataclasses import dataclass, asdict
 
-# Difference between dict??
 @dataclass
 class Query:
     args: list[str]
